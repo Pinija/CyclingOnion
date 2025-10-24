@@ -208,6 +208,7 @@ class ClothingWardrobe:
 WARDROBE = [
     # Upper Body
     Clothing("Sweat Base", LayerType.INNER, BodyPart.UPPER, temp_shift_min=-3, temp_shift_max=0, removable=False, complexity=0.5),
+    Clothing("Thermal Base", LayerType.INNER, BodyPart.UPPER, temp_shift_min=-4, temp_shift_max=-3, removable=False, complexity=1),
     Clothing("Thermal Base Long", LayerType.INNER, BodyPart.UPPER, temp_shift_min=-6, temp_shift_max=-5, removable=False, complexity=1.5),
     Clothing("Merino Base Long", LayerType.INNER, BodyPart.UPPER, temp_shift_min=-5, temp_shift_max=-1, removable=False, complexity=0),
     Clothing("Jersey", LayerType.MID, BodyPart.UPPER, main_comfort_min=20, main_comfort_max=30, temp_shift_min=0, temp_shift_max=-1 ),
@@ -224,8 +225,9 @@ WARDROBE = [
     Clothing("Leg Warmers", LayerType.ACCESSORY, BodyPart.LOWER, temp_shift_min=-3, temp_shift_max=-4, removable=True),
 
     # Feet
+    Clothing("Thin Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_max=1, complexity=-1),
     Clothing("Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-1, complexity=-1),
-    Clothing("Thermal Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-5, temp_shift_max=-2, complexity=-1),
+    Clothing("Thermal Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-5, temp_shift_max=-3, complexity=-1),
     Clothing("Cycling Shoes", LayerType.MID, BodyPart.FEET, main_comfort_min=18, main_comfort_max=28, wind_boost=0.5),
     Clothing("Winter Shoes", LayerType.OUTER, BodyPart.FEET, main_comfort_min=8, main_comfort_max=15, waterproof=True, windproof=True, complexity=2),
     Clothing("Toe Covers", LayerType.ACCESSORY, BodyPart.FEET, temp_shift_min=-2, temp_shift_max=-1, wind_boost=0.5, waterproof=False, removable=True, complexity=0.5),
@@ -235,12 +237,13 @@ WARDROBE = [
     Clothing("Short Gloves", LayerType.MID, BodyPart.HANDS, main_comfort_min=16, main_comfort_max=35, removable=True),
     Clothing("Light Gloves", LayerType.MID, BodyPart.HANDS, main_comfort_min=10, main_comfort_max=23, temp_shift_min=-2, temp_shift_max=-1, removable=True, complexity=1),
     Clothing("Thermal Gloves", LayerType.OUTER, BodyPart.HANDS, main_comfort_min=2, main_comfort_max=14, waterproof=True, windproof=True, removable=True, complexity=2.5),
-    Clothing("Bare Hands", LayerType.MID, BodyPart.HANDS, main_comfort_min=18, main_comfort_max=40),
+    Clothing("Nothing", LayerType.MID, BodyPart.HANDS, main_comfort_min=18, main_comfort_max=40),
 
     # Head
-    Clothing("Sportful Thermal Headband", LayerType.MID, BodyPart.HEAD, main_comfort_min=5, main_comfort_max=18, windproof=True, waterproof=True, removable=True),
-    Clothing("Cap", LayerType.MID, BodyPart.HEAD, main_comfort_min=0, main_comfort_max=15, windproof=True),
-    Clothing("Bare Head", LayerType.MID, BodyPart.HEAD, main_comfort_min=16, main_comfort_max=40),
+    Clothing("Sportful Thermal Headband", LayerType.MID, BodyPart.HEAD, main_comfort_min=3, main_comfort_max=18, windproof=True, waterproof=True, removable=True),
+    Clothing("Sweat Headband", LayerType.MID, BodyPart.HEAD, main_comfort_min=16, main_comfort_max=33, removable=True),
+    Clothing("Thermal Cap", LayerType.MID, BodyPart.HEAD, main_comfort_min=0, main_comfort_max=15, windproof=True, removable=True),
+    Clothing("Nothing", LayerType.MID, BodyPart.HEAD, main_comfort_min=16, main_comfort_max=40),
 
 ]
 

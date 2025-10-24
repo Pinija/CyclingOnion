@@ -17,6 +17,7 @@ class WeatherForecast():
     precipitation_prob: float
     precipilation_vol: float
     wind_max: float
+    is_night: bool
     condition: str
     icon_url: str
     terrain: str
@@ -59,12 +60,22 @@ class WeatherForecast():
         return temp_eff_min, temp_eff_max
 
     def get_precipitation_prob(self):
-        """Get the precipitation probability."""
+        """Get the precipitation probability"""
         return self.precipitation_prob
     
     def get_wind_max(self):
-        """Get the maximum wind speed."""
+        """Get the maximum wind speed"""
         return self.wind_max
+
+    def get_pro_tip(self):
+        """Get a tip."""
+        if self.is_night:
+            return ("It might get dark - dont forget your lights!")
+        elif self.intensity == "tempo" or self.intensity == "extreme":
+            return ("It will be a tough ride - don't forget some fuel!")
+        elif self.temp_max > 25:
+            return ("It might get hot - stay hydrated!")
+
 
 
 def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str):
@@ -92,6 +103,7 @@ def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str):
     condition_text = next_hours[0]["condition"]["text"]
     icon_url = next_hours[0]["condition"]["icon"]
     precip = [h["precip_mm"] for h in next_hours]
+    is_night = [h["is_night"] for h in next_hours]
 
     temp_min = min(temps)
     temp_min_felt = min(wind_chills)

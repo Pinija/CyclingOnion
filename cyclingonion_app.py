@@ -67,6 +67,7 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
 
         weather = get_weather_forecast(location, duration, terrain.lower(), intensity.lower())
         effective_temp = weather.get_effective_temp_range()
+        pro_tip = weather.get_pro_tip()
         outfit = get_optimized_outfit(duration, weather)
 
         # 🧅 RESULTS SECTION
@@ -127,5 +128,5 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
         
 
 st.write("---")
-st.caption("Pro tip: Bring a wind jacket if high descents or alpine conditions are expected! 🏔️")
+st.caption(f"Bonus tip: {pro_tip} 🏔️")
 st.caption("Built with ❤️ for Helen.")
