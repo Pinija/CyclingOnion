@@ -229,11 +229,11 @@ WARDROBE = [
     Clothing("Thin Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_max=1, complexity=-1),
     Clothing("Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-1, complexity=-1),
     Clothing("Merino Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-3, temp_shift_max=-1, complexity=-1),
-    Clothing("Thermal Socks", LayerType.MID, BodyPart.FEET, temp_shift_min=-5, temp_shift_max=-3, complexity=-1),
+    Clothing("Thermal Socks", LayerType.MID, BodyPart.FEET, temp_shift_min=-4, temp_shift_max=-3),
     Clothing("Cycling Shoes", LayerType.OUTER, BodyPart.FEET, main_comfort_min=18, main_comfort_max=30, wind_boost=0.5),
     Clothing("Winter Shoes", LayerType.OUTER, BodyPart.FEET, main_comfort_min=8, main_comfort_max=18, waterproof=True, windproof=True, complexity=2),
     Clothing("Toe Covers", LayerType.ACCESSORY, BodyPart.FEET, temp_shift_min=-2, temp_shift_max=-1, wind_boost=0.5, waterproof=False, removable=True, complexity=0.5),
-    Clothing("Shoe Covers", LayerType.ACCESSORY, BodyPart.FEET, temp_shift_min=-4, temp_shift_max=-2, windproof=True, waterproof=True, removable=True, complexity=0.75),
+    Clothing("Shoe Covers", LayerType.ACCESSORY, BodyPart.FEET, temp_shift_min=-4, temp_shift_max=-4, windproof=True, waterproof=True),
 
     # Hands
     Clothing("Short Gloves", LayerType.MID, BodyPart.HANDS, main_comfort_min=16, main_comfort_max=35, removable=True),
