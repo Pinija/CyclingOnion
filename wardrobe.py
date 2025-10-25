@@ -218,18 +218,20 @@ WARDROBE = [
     Clothing("Sportful Total Comfort Winter Jacket", LayerType.OUTER, BodyPart.UPPER, main_comfort_min=10, main_comfort_max=15, windproof=True, waterproof=True, complexity=2.5),
 
     # Lower Body
+
     Clothing("Short Bibs", LayerType.MID, BodyPart.LOWER, main_comfort_min=15, main_comfort_max=35),
     Clothing("Sportful Fiandre Bibshort", LayerType.MID, BodyPart.LOWER, main_comfort_min=9, main_comfort_max=22, temp_shift_min=-3, temp_shift_max=-4, waterproof=True),
     Clothing("Sportful Fiandre Long Bibs", LayerType.MID, BodyPart.LOWER, main_comfort_min=6, main_comfort_max=15, temp_shift_min=-6, wind_boost=0.5, temp_shift_max=-7, waterproof=True),
-    Clothing("Winter Bibs", LayerType.OUTER, BodyPart.LOWER, main_comfort_min=3, main_comfort_max=10, waterproof=True, windproof=True, complexity=1.5),
+    Clothing("Winter Bibs Padless", LayerType.OUTER, BodyPart.LOWER, main_comfort_min=5, main_comfort_max=13, waterproof=True, windproof=True, complexity=1.5),
     Clothing("Leg Warmers", LayerType.ACCESSORY, BodyPart.LOWER, temp_shift_min=-3, temp_shift_max=-4, removable=True),
 
     # Feet
     Clothing("Thin Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_max=1, complexity=-1),
     Clothing("Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-1, complexity=-1),
-    Clothing("Thermal Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-5, temp_shift_max=-3, complexity=-1),
-    Clothing("Cycling Shoes", LayerType.MID, BodyPart.FEET, main_comfort_min=18, main_comfort_max=28, wind_boost=0.5),
-    Clothing("Winter Shoes", LayerType.OUTER, BodyPart.FEET, main_comfort_min=8, main_comfort_max=15, waterproof=True, windproof=True, complexity=2),
+    Clothing("Merino Socks", LayerType.INNER, BodyPart.FEET, temp_shift_min=-3, temp_shift_max=-1, complexity=-1),
+    Clothing("Thermal Socks", LayerType.MID, BodyPart.FEET, temp_shift_min=-5, temp_shift_max=-3, complexity=-1),
+    Clothing("Cycling Shoes", LayerType.OUTER, BodyPart.FEET, main_comfort_min=18, main_comfort_max=30, wind_boost=0.5),
+    Clothing("Winter Shoes", LayerType.OUTER, BodyPart.FEET, main_comfort_min=8, main_comfort_max=18, waterproof=True, windproof=True, complexity=2),
     Clothing("Toe Covers", LayerType.ACCESSORY, BodyPart.FEET, temp_shift_min=-2, temp_shift_max=-1, wind_boost=0.5, waterproof=False, removable=True, complexity=0.5),
     Clothing("Shoe Covers", LayerType.ACCESSORY, BodyPart.FEET, temp_shift_min=-4, temp_shift_max=-2, windproof=True, waterproof=True, removable=True, complexity=0.75),
 
