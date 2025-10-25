@@ -23,7 +23,6 @@ class WeatherForecast():
     terrain: str
     intensity: str
 
-    @property
     def get_icon(self):
         """Return a pixel bitmap of the icon describing the weather."""
         icon_url = "https:" + self.icon_url
@@ -70,11 +69,17 @@ class WeatherForecast():
     def get_pro_tip(self):
         """Get a tip."""
         if self.is_night:
-            return ("It might get dark - dont forget your lights!")
-        elif self.intensity == "tempo" or self.intensity == "extreme":
-            return ("It will be a tough ride - don't forget some fuel!")
-        elif self.temp_max > 25:
+            return ("It might get dark - don't forget your lights!")
+        if self.temp_max > 25:
             return ("It might get hot - stay hydrated!")
+        if self.temp_min < 10:
+            return ("If you tend to get cold hands & feet - bring some extra gloves and socks!")
+        if self.intensity == "tempo" or self.intensity == "extreme" or self.forecast_duraction > 2:
+            return ("It will be a tough ride - don't forget some fuel!")
+        if self.terrain == "mountain" or self.terrain == "alpine":
+            return ("Enjoy the view! (And bring a wind jacket!)")
+        
+        return ("Enjoy the ride!")
 
 
 
@@ -103,7 +108,7 @@ def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str):
     condition_text = next_hours[0]["condition"]["text"]
     icon_url = next_hours[0]["condition"]["icon"]
     precip = [h["precip_mm"] for h in next_hours]
-    is_night = [h["is_night"] for h in next_hours]
+    is_night = [not h["is_day"] for h in next_hours]
 
     temp_min = min(temps)
     temp_min_felt = min(wind_chills)
@@ -123,6 +128,7 @@ def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str):
         wind_max = round(wind_max, 1),
         condition = condition_text,
         icon_url = icon_url,
+        is_night=any(is_night),
         terrain = terrain,
         intensity = intensity
     )
