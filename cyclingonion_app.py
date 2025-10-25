@@ -15,7 +15,7 @@ st.set_page_config(
 col1, col2 = st.columns([1, 4])  # small left col for icon, big right col for title
 
 with col1:
-    st.image("data/CyclingOnion_Icon_v2.png", width=130)
+    st.image("data/CyclingOnion_Icon_V2.png", width=130)
 
 with col2:
     st.markdown("""
