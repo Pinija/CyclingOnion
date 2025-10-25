@@ -15,7 +15,7 @@ st.set_page_config(
 col1, col2 = st.columns([1, 4])  # small left col for icon, big right col for title
 
 with col1:
-    st.image("data/onion_icon.png", width=150)
+    st.image("data/CyclingOnion_Icon_v2.png", width=130)
 
 with col2:
     st.markdown("""
@@ -82,22 +82,27 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
 
         # --- Weather summary card ---
         with st.container():
-            cols = st.columns([1, 2])
-            with cols[0]:
-                st.markdown(
-                    f"""
-                    <h4 style='margin-bottom:3px;'>{weather.condition}</h4>
-                    <p style='margin:0;'>🌡️ Temperature: <b>{weather.temp_min:.1f} – {weather.temp_max:.1f} °C</b></p>
-                    <p style='margin:0;'>🥶 Felt temperature: <b>{effective_temp[0]:.1f} – {effective_temp[1]:.1f} °C</b></p>
-                    <p style='margin:0;'>💨 Wind: <b>{weather.wind_max:.0f} km/h</b></p>
-                    <p style='margin:0;'>🌧️ Precipitation chance: <b>{weather.precipitation_prob}%</b></p>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with cols[1]:
-                st.image(weather.get_icon, width=200)
-            
-        st.write("---")
+            # Create two small columns for icon and condition
+            icon_col, text_col = st.columns([1, 8])
+
+            with icon_col:
+                st.image(weather.get_icon(), width=60)
+
+            with text_col:
+                st.markdown(f"### {weather.condition}")
+
+            # Weather details below
+            st.markdown(
+                f"""
+                <p style='margin:0;'>🌡️ Temperature: <b>{weather.temp_min:.1f} – {weather.temp_max:.1f} °C</b></p>
+                <p style='margin:0;'>🥶 Felt temperature: <b>{effective_temp[0]:.1f} – {effective_temp[1]:.1f} °C</b></p>
+                <p style='margin:0;'>💨 Wind: <b>{weather.wind_max:.0f} km/h</b></p>
+                <p style='margin:0;'>🌧️ Precipitation chance: <b>{weather.precipitation_prob}%</b></p>
+                """,
+                unsafe_allow_html=True,
+            )
+                    
+            st.write("---")
 
         icons = {
             "Head": "🧢",
@@ -125,8 +130,8 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
                 """,
                 unsafe_allow_html=True
             )
-        
+        st.write("")
+        st.caption(f"Bonus tip: {pro_tip} 🏔️")
 
 st.write("---")
-st.caption(f"Bonus tip: {pro_tip} 🏔️")
 st.caption("Built with ❤️ for Helen.")
