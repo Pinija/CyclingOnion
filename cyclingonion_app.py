@@ -3,6 +3,7 @@
 import streamlit as st
 from outfitter import get_optimized_outfit
 from weather import get_weather_forecast
+from properties import get_terrain, get_intensity
 
 # Set page config with icon
 st.set_page_config(
@@ -65,10 +66,12 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
     else:
         st.success(f"Fetching weather and outfit suggestions for a ride in {location}...")
 
-        weather = get_weather_forecast(location, duration, terrain.lower(), intensity.lower())
+        terrain_enum = get_terrain(terrain)
+        intensity_enum = get_intensity(intensity)
+        weather = get_weather_forecast(location, duration, terrain_enum, intensity_enum)
         effective_temp = weather.get_effective_temp_range()
         pro_tip = weather.get_pro_tip()
-        outfit = get_optimized_outfit(duration, weather)
+        outfit = get_optimized_outfit(duration, weather, intensity_enum, terrain_enum)
 
         # 🧅 RESULTS SECTION
 
