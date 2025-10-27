@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from io import BytesIO
 import requests
+from properties import Intensity, Terrain
 
 API_KEY = "38abfc21c9604a05b51174425252210"
 
@@ -20,8 +21,8 @@ class WeatherForecast():
     is_night: bool
     condition: str
     icon_url: str
-    terrain: str
-    intensity: str
+    terrain: Terrain
+    intensity: Intensity
 
     def get_icon(self):
         """Return a pixel bitmap of the icon describing the weather."""
@@ -30,33 +31,13 @@ class WeatherForecast():
         return BytesIO(response.content)
 
     def get_effective_temp_range(self):
-        """ Compute realistic 'felt' temperature range for cycling:
-        - uphill feels warmer (effort)
-        - downhill feels colder (wind chill)
-        - altitude gets colder"""
+        """Compute height adjustet temperature range."""
         t_up = self.temp_max
         t_down = self.temp_min_felt
-
-        # Intensity adds heat on climbs only
-        if self.intensity == "medium":
-            t_up += 1.5
-        elif self.intensity == "tempo":
-            t_up += 3
-        elif self.intensity == "extreme":
-            t_up += 5
-
+ 
         # Terrain altitude correction (colder at height)
-        if self.terrain == "alpine":
-            t_down -= 9
-        if self.terrain == "mountain":
-            t_down -= 5  
-        elif self.terrain == "hilly":
-            t_down -= 1 
-
-        # Compute comfort band
-        temp_eff_min = round(t_down, 1)
-        temp_eff_max = round(t_up, 1)
-        return temp_eff_min, temp_eff_max
+        t_down = t_down - (self.terrain.value * 3)
+        return t_down, t_up
 
     def get_precipitation_prob(self):
         """Get the precipitation probability"""
@@ -83,11 +64,9 @@ class WeatherForecast():
 
 
 
-def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str):
-    """
-    Query WeatherAPI for the next `hours` hours in a given city,
-    and compute temperature range, effective felt temps, rain prob, wind avg.
-    """
+def get_weather_forecast(city: str, hours: int, terrain: Terrain, intensity: Intensity):
+    """Query WeatherAPI for the next `hours` hours in a given city and create a
+    `WeatherForecast` object."""
     url = "https://api.weatherapi.com/v1/forecast.json"
     params = {"key": API_KEY, "q": city, "days": 1, "aqi": "no", "alerts": "no"}
     resp = requests.get(url, params=params)
@@ -134,4 +113,4 @@ def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str):
     )
 
 if __name__ == "__main__":
-    print(get_weather_forecast("Freiburg", 3, "mountain", "hard"))
+    pass
