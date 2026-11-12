@@ -5,7 +5,7 @@ addopts = "-ra --strict-markers"
 
 [tool.coverage.run]
 branch = true
-source = ["weather", "wardrobe", "outfitter", "cyclingonion_app"]
+source = ["properties", "weather", "wardrobe", "outfitter", "cyclingonion_app"]
 
 [tool.coverage.report]
 show_missing = true

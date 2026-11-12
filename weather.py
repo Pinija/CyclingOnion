@@ -7,10 +7,10 @@ from urllib.parse import urlsplit
 
 import requests
 
+from properties import Intensity, Terrain, get_intensity, get_terrain
+
 FORECAST_URL = "https://api.weatherapi.com/v1/forecast.json"
 REQUEST_TIMEOUT = 10
-TERRAIN_COOLING = {"flat": 0, "hilly": 1, "mountain": 5, "alpine": 9}
-INTENSITY_WARMING = {"easy": 0, "medium": 1.5, "tempo": 3, "extreme": 5}
 
 
 class WeatherError(ValueError):
@@ -35,8 +35,13 @@ class WeatherForecast:
     is_night: bool
     condition: str
     icon_url: str
-    terrain: str
-    intensity: str
+    terrain: Terrain
+    intensity: Intensity
+
+    def __post_init__(self):
+        """Normalize labels at the boundary so model logic always uses enums."""
+        self.terrain = get_terrain(self.terrain)
+        self.intensity = get_intensity(self.intensity)
 
     def get_icon(self) -> str | None:
         """Return a provider icon URL for the browser, or None for a missing icon.
@@ -54,10 +59,9 @@ class WeatherForecast:
         return None
 
     def get_effective_temp_range(self) -> tuple[float, float]:
-        """Apply a terrain cooling allowance and an exertion warming allowance."""
-        low = self.temp_min_felt - TERRAIN_COOLING[self.terrain]
-        high = self.temp_max + INTENSITY_WARMING[self.intensity]
-        return round(low, 1), round(high, 1)
+        """Apply the terrain allowance; intensity affects clothing scores only."""
+        low = self.temp_min_felt - 3 * self.terrain.value
+        return round(low, 1), round(self.temp_max, 1)
 
     def get_precipitation_prob(self) -> float:
         """Return the maximum hourly rain probability, not whole-ride probability."""
@@ -75,9 +79,9 @@ class WeatherForecast:
             return "It might get hot - stay hydrated!"
         if self.temp_min < 10:
             return "If you tend to get cold hands & feet - bring some extra gloves and socks!"
-        if self.intensity in ("tempo", "extreme") or self.forecast_duration > 2:
+        if self.intensity in (Intensity.TEMPO, Intensity.EXTREME) or self.forecast_duration > 2:
             return "It will be a tough ride - don't forget some fuel!"
-        if self.terrain in ("mountain", "alpine"):
+        if self.terrain in (Terrain.MOUNTAIN, Terrain.ALPINE):
             return "Enjoy the view! (And bring a wind jacket!)"
         return "Enjoy the ride!"
 
@@ -96,7 +100,9 @@ def _number(value, minimum=None, maximum=None) -> float:
     return number
 
 
-def _parse_forecast(data: dict, hours: int, terrain: str, intensity: str) -> WeatherForecast:
+def _parse_forecast(
+    data: dict, hours: int, terrain: Terrain, intensity: Intensity
+) -> WeatherForecast:
     """Select contiguous hourly buckets overlapping [now, now + duration).
 
     Epoch comparisons handle midnight and timezone/DST changes without depending
@@ -152,7 +158,9 @@ def _parse_forecast(data: dict, hours: int, terrain: str, intensity: str) -> Wea
     )
 
 
-def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str) -> WeatherForecast:
+def get_weather_forecast(
+    city: str, hours: int, terrain: Terrain | str, intensity: Intensity | str
+) -> WeatherForecast:
     """Fetch a complete 1–6 hour forecast using WEATHERAPI_KEY from the environment.
 
     Raise WeatherError for invalid inputs, missing configuration, network/API
@@ -163,10 +171,11 @@ def get_weather_forecast(city: str, hours: int, terrain: str, intensity: str) ->
         raise WeatherError("Please enter a location before continuing.")
     if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= 6:
         raise WeatherError("Ride duration must be a whole number from 1 to 6 hours.")
-    if not isinstance(terrain, str) or terrain not in TERRAIN_COOLING:
-        raise WeatherError("Please select a valid terrain.")
-    if not isinstance(intensity, str) or intensity not in INTENSITY_WARMING:
-        raise WeatherError("Please select a valid intensity.")
+    try:
+        terrain = get_terrain(terrain)
+        intensity = get_intensity(intensity)
+    except ValueError as error:
+        raise WeatherError(str(error)) from None
     api_key = os.environ.get("WEATHERAPI_KEY", "").strip()
     if not api_key:
         raise WeatherError("Set WEATHERAPI_KEY in the environment before requesting a forecast.")

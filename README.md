@@ -79,9 +79,10 @@ after dependencies are installed. The suite includes:
 
 | Area | Behaviors checked |
 | --- | --- |
-| Scoring and layering | Both hot and cold penalties, zero-degree ratings, layer rules, footwear, independent wardrobe copies |
+| Ride settings | UI label conversion (including Easy → LIGHT), enums, invalid settings |
+| Scoring and layering | Both temperature penalties, intensity effects, bounded breathability, additive removability, layer rules, footwear |
 | Weather | Aggregation, midnight, partial hours, epoch ordering, missing hours, malformed data, input validation, service errors |
-| Selection | Minimum-cost choice, deterministic ties, complete outfits, missing inventory, duration consistency |
+| Selection | Minimum-cost choice, deterministic ties, intensity-dependent outfits, missing inventory, consistent ride settings |
 | Streamlit | Initial render, input validation, successful requests, error recovery, missing configuration/icons, escaped location text |
 
 Coverage includes branches and enforces a 90% minimum. Coverage indicates exercised
@@ -130,26 +131,37 @@ inside the chosen environment too.
    Precipitation volume is prorated at the ride boundaries, assuming uniform rain
    within each hour, but is not currently used in scoring.
 3. **Effective temperature band:** subtract a terrain allowance from the lowest
-   wind-chill temperature (flat 0°C, hilly 1°C, mountain 5°C, alpine 9°C). Add an effort
-   allowance to the highest air temperature (easy 0°C, medium 1.5°C, tempo 3°C, extreme 5°C).
-   These are deliberate simplifications, not route elevation or physiological models.
+   wind-chill temperature (flat 0°C, hilly 3°C, mountain 6°C, alpine 9°C). The upper
+   bound remains the highest air temperature. Intensity affects clothing scores only.
+   These allowances are deliberate simplifications, not measured route elevation.
 4. **Layering:** enumerate subsets for each body part. Allow at most one inner, mid,
    and outer layer, plus accessories. Require a mid or outer layer; an outer layer
    needs an inner or mid beneath it. Footwear must include an outer layer (shoes).
    The outermost layer supplies the comfort limits and other layers shift them.
+   Breathability ratings multiply across layers, keeping the result in [0, 1].
+   Removability contributions add across layers; at least 1 means “Removable” in the UI.
 5. **Scoring:** choose the lowest score independently for each body part:
 
 ```text
-cold = max(comfort_min - effective_min, 0)² × (0.33 + duration_hours / 3)
-warm = max(effective_max - comfort_max, 0)²
-rain = 0 if waterproof else 0.75 × maximum_hourly_rain_probability
+i = intensity.value  # Easy/LIGHT=1, Medium=2, Tempo=3, Extreme=4
+t = terrain.value    # Flat=0, Hilly=1, Mountain=2, Alpine=3
+cold = max(comfort_min - effective_min, 0)² × (0.5 + duration_hours / 2)
+warm = max(effective_max - comfort_max, 0)² × i / 2
+sweat = 10 × (1 - breathability) × i
+rain = 0 if waterproof else 0.5 × maximum_hourly_rain_probability
 wind = 0 if windproof else 0.5 × maximum_wind_kmh
-score = cold + warm + rain + wind + 5 × complexity - (4.5 if removable else 0)
+removal_bonus = -2 × removability × (1 + i) × t
+score = cold + warm + sweat + rain + wind + 5 × complexity + removal_bonus
 ```
 
 Both cold and warm penalties apply when a ride spans both ends of a garment's
 comfort range. Protection flags combine across layers; accumulated wind resistance
 of at least 0.9 also counts as windproof. Ties preserve catalogue order.
+
+The forecast stores terrain and intensity as enums. Label converters accept strings
+at the input boundary, including “Easy” as an alias for `Intensity.LIGHT`. The
+optimizer takes both settings from the forecast so its scoring stays consistent.
+The removability reward is zero on flat terrain and grows with terrain and effort.
 
 Independent selection minimizes the total additive score because the current model
 has no interactions between body parts. Generating subsets is exponential in the
@@ -162,6 +174,7 @@ but should change before supporting large catalogues.
 | --- | --- |
 | `cyclingonion_app.py` | Streamlit inputs, results, and recoverable error display |
 | `weather.py` | API boundary, validation, forecast aggregation, effective temperatures and tips |
+| `properties.py` | Terrain/intensity enums and validated UI-label conversion |
 | `wardrobe.py` | Dataclasses, clothing catalogue, layer rules and discomfort score |
 | `outfitter.py` | Selection of the lowest-scoring combination for each body part |
 | `tests/` | Offline unit, integration, and Streamlit tests |
@@ -171,7 +184,9 @@ but should change before supporting large catalogues.
 To add clothing, edit `WARDROBE` in `wardrobe.py`. Main layers need meaningful minimum
 and maximum comfort temperatures. Inner layers/accessories contribute temperature
 shifts and protection. Shoes use `LayerType.OUTER` for `BodyPart.FEET`. Run the tests
-after editing the catalogue. `data/wardrobe.json` is an unused, empty placeholder;
+after editing the catalogue. Set `breathability` between 0 and 1 and `removability`
+to a nonnegative contribution (usually 0 or 1). `removable` is a derived read-only
+property, not a constructor argument. `data/wardrobe.json` is an unused, empty placeholder;
 the application does not load clothing from JSON.
 
 ## Current limits and next steps
@@ -181,6 +196,11 @@ the application does not load clothing from JSON.
   probability of rain at any point during the entire ride.
 - Ratings and score weights need calibration against actual rides. Boolean weather
   protection and the removability bonus simplify how clothing behaves.
+- All built-in garments currently use the neutral default breathability of 1.0.
+  The sweat penalty becomes active when lower ratings are supplied. Multiplying
+  ratings is a bounded heuristic, not a physical model of moisture transport.
+- The additive removability reward can favor extra layers on demanding terrain,
+  even when temperatures stay steady. Its strength needs validation against rides.
 - The optimizer always returns the best available combination, even if every option
   scores poorly. A useful next feature is an explained recommendation with an
   explicit indication when the wardrobe cannot cover the conditions.

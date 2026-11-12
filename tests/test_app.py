@@ -57,7 +57,7 @@ def test_successful_ride_displays_forecast_and_all_body_parts(app, weather_http)
     output = "\n".join(element.value for element in app.markdown)
     assert "Freiburg" in output
     assert "6 h" in output
-    assert "9.0 – 25.0 °C" in output
+    assert "9.0 – 20.0 °C" in output
     assert "Maximum hourly rain chance" in output
     for part in ("Head", "Upper body", "Lower body", "Hands", "Feet"):
         assert part in output
@@ -122,3 +122,12 @@ def test_logo_loads_when_started_from_another_directory(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     app = AppTest.from_file(str(APP_PATH), default_timeout=10).run()
     assert not app.exception
+
+
+@pytest.mark.parametrize("intensity", ["Easy", "Medium", "Tempo", "Extreme"])
+def test_every_intensity_label_can_produce_an_outfit(app, weather_http, intensity):
+    app.session_state["intensity"] = intensity
+    submit(app)
+    assert not app.exception
+    assert not app.error
+    assert any("Recommended outfit" in element.value for element in app.markdown)

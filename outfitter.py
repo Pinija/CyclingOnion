@@ -14,7 +14,8 @@ def get_optimized_outfit(
     """Minimize the additive discomfort score, independently per body part.
 
     Ties retain wardrobe order. Supplying a wardrobe supports custom inventories
-    and deterministic tests without modifying the built-in catalogue.
+    and deterministic tests without modifying the built-in catalogue. Terrain
+    and intensity come from the forecast, keeping the ride settings consistent.
     """
     if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= 6:
         raise OutfitError("Ride duration must be a whole number from 1 to 6 hours.")
@@ -39,7 +40,13 @@ def get_optimized_outfit(
         outfit[name] = min(
             candidates,
             key=lambda item: item.get_discomfort(
-                eff_temp_min, eff_temp_max, weather.precipitation_prob, weather.wind_max, hours
+                eff_temp_min,
+                eff_temp_max,
+                weather.precipitation_prob,
+                weather.wind_max,
+                hours,
+                weather.intensity,
+                weather.terrain,
             ),
         )
     return outfit

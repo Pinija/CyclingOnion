@@ -69,9 +69,7 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
     else:
         try:
             with st.spinner("Checking the weather and finding your outfit..."):
-                weather = get_weather_forecast(
-                    location, duration, terrain.lower(), intensity.lower()
-                )
+                weather = get_weather_forecast(location, duration, terrain, intensity)
                 outfit = get_optimized_outfit(duration, weather)
         except (WeatherError, OutfitError) as error:
             st.error(str(error))

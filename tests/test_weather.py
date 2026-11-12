@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 import requests
 
+from properties import Intensity, Terrain
 from weather import FORECAST_URL, REQUEST_TIMEOUT, WeatherError, get_weather_forecast
 
 
@@ -28,7 +29,7 @@ def test_request_uses_environment_key_timeout_and_two_days(weather_http):
     )
     response.raise_for_status.assert_called_once()
     assert result.forecast_duration == 2
-    assert result.get_effective_temp_range() == (18, 21.5)
+    assert result.get_effective_temp_range() == (18, 20)
 
 
 def test_hourly_aggregation_uses_only_the_ride_window(weather_payload, weather_http):
@@ -247,10 +248,12 @@ def test_invalid_inputs_fail_before_request(weather_http, city, duration, terrai
 
 
 @pytest.mark.parametrize(
-    ("terrain", "low"), [("flat", 13), ("hilly", 12), ("mountain", 8), ("alpine", 4)]
+    ("terrain", "low"),
+    [(Terrain.FLAT, 13), (Terrain.HILLY, 10), (Terrain.MOUNTAIN, 7), (Terrain.ALPINE, 4)],
 )
 @pytest.mark.parametrize(
-    ("intensity", "high"), [("easy", 20), ("medium", 21.5), ("tempo", 23), ("extreme", 25)]
+    ("intensity", "high"),
+    [(Intensity.LIGHT, 20), (Intensity.MEDIUM, 20), (Intensity.TEMPO, 20), (Intensity.EXTREME, 20)],
 )
 def test_effective_temperature_allowances(forecast, terrain, low, intensity, high):
     assert replace(forecast, terrain=terrain, intensity=intensity).get_effective_temp_range() == (
@@ -302,3 +305,26 @@ def test_icon_urls_are_normalized_without_a_network_call(forecast, url):
 )
 def test_invalid_icon_urls_use_fallback(forecast, url):
     assert replace(forecast, icon_url=url).get_icon() is None
+
+
+def test_enum_settings_reach_the_forecast(weather_http):
+    result = get_weather_forecast("Freiburg", 2, Terrain.MOUNTAIN, Intensity.EXTREME)
+    assert result.terrain is Terrain.MOUNTAIN
+    assert result.intensity is Intensity.EXTREME
+    assert result.get_effective_temp_range() == (12, 20)
+
+
+def test_easy_ui_label_maps_to_light_intensity(weather_http):
+    result = get_weather_forecast("Freiburg", 2, "Flat", "Easy")
+    assert result.terrain is Terrain.FLAT
+    assert result.intensity is Intensity.LIGHT
+
+
+@pytest.mark.parametrize("intensity", [Intensity.TEMPO, Intensity.EXTREME])
+def test_short_high_intensity_rides_still_get_fuel_tip(forecast, intensity):
+    assert "fuel" in replace(forecast, intensity=intensity, forecast_duration=1).get_pro_tip()
+
+
+@pytest.mark.parametrize("terrain", [Terrain.MOUNTAIN, Terrain.ALPINE])
+def test_short_easy_mountain_rides_get_terrain_tip(forecast, terrain):
+    assert "view" in replace(forecast, terrain=terrain, intensity=Intensity.LIGHT).get_pro_tip()

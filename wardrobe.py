@@ -3,6 +3,9 @@
 from dataclasses import dataclass, replace
 from enum import Enum
 from itertools import combinations
+from math import isfinite
+
+from properties import Intensity, Terrain
 
 
 class BodyPart(Enum):
@@ -40,7 +43,8 @@ class Clothing:
             of close to 1, this is considered windproof even if no item is explicitly windproof.
         waterproof (bool): Whether this item is waterproof.
         windproof (bool): Whether this item is windproof (fully blocks wind).
-        removable (bool): Whether this item can be removed during a ride, reducing warm discomfort.
+        breathability (float): Relative breathability, from 0 (sealed) to 1 (fully breathable).
+        removability (float): Nonnegative removable-layer contribution, summed across a combination.
         complexity (float): Penalty representing the effort or bulk of wearing this item."""
 
     name: str
@@ -55,10 +59,31 @@ class Clothing:
     temp_shift_min: float = 0.0
     temp_shift_max: float = 0.0
     wind_boost: float = 0.0
+    breathability: float = 1.0
+    removability: float = 0.0
     waterproof: bool = False
     windproof: bool = False
-    removable: bool = False
     complexity: float = 1.0
+
+    def __post_init__(self):
+        """Keep the new scoring inputs finite and within their intended ranges."""
+        if (
+            not isinstance(self.breathability, (int, float))
+            or not isfinite(self.breathability)
+            or not 0 <= self.breathability <= 1
+        ):
+            raise ValueError("Breathability must be a number from 0 to 1.")
+        if (
+            not isinstance(self.removability, (int, float))
+            or not isfinite(self.removability)
+            or self.removability < 0
+        ):
+            raise ValueError("Removability must be a finite nonnegative number.")
+
+    @property
+    def removable(self) -> bool:
+        """Indicate whether the combination has at least one removable layer."""
+        return self.removability >= 1
 
     def __repr__(self):
         """Get a string of the name of the item or combo."""
@@ -80,10 +105,13 @@ class Clothing:
         rain_prob: float,
         wind_speed: float,
         duration_hours: int,
+        intensity: Intensity,
+        terrain: Terrain,
     ) -> float:
         """Score both ends of the effective temperature range; lower is better.
 
-        Intensity is already included in the weather's effective temperatures.
+        Intensity scales heat, sweat, and removability effects here; the weather
+        temperature range includes only the terrain allowance.
         These weights are personal heuristics, not calibrated comfort measurements.
         """
         # Temperature comfort
@@ -95,14 +123,18 @@ class Clothing:
             warm_penalty = (temp_max - self.main_comfort_max) ** 2
 
         # Longer exposure increases the cold penalty.
-        cold_penalty *= 0.33 + duration_hours / 3
+        cold_penalty *= 0.5 + duration_hours / 2
+        warm_penalty *= intensity.value / 2
+
+        # Low breathability matters more as exertion increases.
+        sweat_penalty = 10 * (1 - self.breathability) * intensity.value
 
         # Add penalties for missing protection
-        rain_penalty = 0.75 * rain_prob if not self.waterproof else 0
+        rain_penalty = 0.5 * rain_prob if not self.waterproof else 0
         wind_penalty = 0.5 * wind_speed if not self.windproof else 0
 
-        # Reward removability (slightly)
-        remove_bonus = -4.5 if self.removable else 0
+        # Preserve the terrain- and intensity-dependent removable-layer reward.
+        remove_bonus = -2 * self.removability * (1 + intensity.value) * terrain.value
 
         # Complexity penalty (prefer simpler outfits)
         complexity_penalty = 5 * self.complexity
@@ -111,6 +143,7 @@ class Clothing:
             cold_penalty
             + warm_penalty
             + rain_penalty
+            + sweat_penalty
             + wind_penalty
             + complexity_penalty
             + remove_bonus
@@ -141,7 +174,8 @@ class ClothingCombo:
         windproof = outer.windproof
         wind_boost = outer.wind_boost
         complexity = outer.complexity
-        removable = outer.removable
+        breathability = outer.breathability
+        removability = outer.removability
 
         # Combine modifier effects from inner layers
         for inner in sorted_layers[:-1]:
@@ -151,7 +185,9 @@ class ClothingCombo:
             waterproof = waterproof or inner.waterproof
             windproof = windproof or inner.windproof
             complexity += inner.complexity
-            removable = removable or inner.removable
+            # Multiplication keeps ratings bounded and rewards more breathable layers.
+            breathability *= inner.breathability
+            removability += inner.removability
 
         if wind_boost >= 0.9:
             windproof = True
@@ -168,7 +204,8 @@ class ClothingCombo:
             wind_boost=wind_boost,
             waterproof=waterproof,
             windproof=windproof,
-            removable=removable,
+            breathability=breathability,
+            removability=removability,
             complexity=complexity,
         )
 
@@ -248,7 +285,7 @@ WARDROBE = [
         BodyPart.UPPER,
         temp_shift_min=-3,
         temp_shift_max=0,
-        removable=False,
+        removability=0.0,
         complexity=0.5,
     ),
     Clothing(
@@ -257,7 +294,7 @@ WARDROBE = [
         BodyPart.UPPER,
         temp_shift_min=-4,
         temp_shift_max=-3,
-        removable=False,
+        removability=0.0,
         complexity=1,
     ),
     Clothing(
@@ -266,7 +303,7 @@ WARDROBE = [
         BodyPart.UPPER,
         temp_shift_min=-6,
         temp_shift_max=-5,
-        removable=False,
+        removability=0.0,
         complexity=1.5,
     ),
     Clothing(
@@ -275,7 +312,7 @@ WARDROBE = [
         BodyPart.UPPER,
         temp_shift_min=-5,
         temp_shift_max=-1,
-        removable=False,
+        removability=0.0,
         complexity=0,
     ),
     Clothing(
@@ -296,7 +333,7 @@ WARDROBE = [
         temp_shift_min=-4,
         temp_shift_max=-5,
         wind_boost=0.5,
-        removable=False,
+        removability=0.0,
         complexity=2,
     ),
     Clothing(
@@ -306,7 +343,7 @@ WARDROBE = [
         temp_shift_min=-3,
         temp_shift_max=-2,
         wind_boost=0.5,
-        removable=True,
+        removability=1.0,
     ),
     Clothing(
         "Wind Jacket",
@@ -315,7 +352,7 @@ WARDROBE = [
         main_comfort_min=15,
         main_comfort_max=20,
         windproof=True,
-        removable=True,
+        removability=1.0,
     ),
     Clothing(
         "Sportful Total Comfort Winter Jacket",
@@ -366,7 +403,7 @@ WARDROBE = [
         BodyPart.LOWER,
         temp_shift_min=-3,
         temp_shift_max=-4,
-        removable=True,
+        removability=1.0,
     ),
     # Feet
     Clothing("Thin Cycling Socks", LayerType.INNER, BodyPart.FEET, temp_shift_max=1, complexity=-1),
@@ -406,7 +443,7 @@ WARDROBE = [
         temp_shift_max=-1,
         wind_boost=0.5,
         waterproof=False,
-        removable=True,
+        removability=1.0,
         complexity=0.5,
     ),
     Clothing(
@@ -425,7 +462,7 @@ WARDROBE = [
         BodyPart.HANDS,
         main_comfort_min=16,
         main_comfort_max=35,
-        removable=True,
+        removability=1.0,
     ),
     Clothing(
         "Light Gloves",
@@ -435,7 +472,7 @@ WARDROBE = [
         main_comfort_max=23,
         temp_shift_min=-2,
         temp_shift_max=-1,
-        removable=True,
+        removability=1.0,
         complexity=1,
     ),
     Clothing(
@@ -446,7 +483,7 @@ WARDROBE = [
         main_comfort_max=14,
         waterproof=True,
         windproof=True,
-        removable=True,
+        removability=1.0,
         complexity=2.5,
     ),
     Clothing("Nothing", LayerType.MID, BodyPart.HANDS, main_comfort_min=18, main_comfort_max=40),
@@ -459,7 +496,7 @@ WARDROBE = [
         main_comfort_max=18,
         windproof=True,
         waterproof=True,
-        removable=True,
+        removability=1.0,
     ),
     Clothing(
         "Sweat Headband",
@@ -467,7 +504,7 @@ WARDROBE = [
         BodyPart.HEAD,
         main_comfort_min=16,
         main_comfort_max=33,
-        removable=True,
+        removability=1.0,
     ),
     Clothing(
         "Thermal Cap",
@@ -476,7 +513,7 @@ WARDROBE = [
         main_comfort_min=0,
         main_comfort_max=15,
         windproof=True,
-        removable=True,
+        removability=1.0,
     ),
     Clothing("Nothing", LayerType.MID, BodyPart.HEAD, main_comfort_min=16, main_comfort_max=40),
 ]

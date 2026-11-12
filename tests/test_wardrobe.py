@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 
+from properties import Intensity, Terrain
 from wardrobe import (
     BodyPart,
     Clothing,
@@ -21,24 +22,30 @@ def jersey():
 
 @pytest.mark.parametrize(
     ("low", "high", "expected"),
-    [(10, 20, 0), (5, 20, 33.25), (10, 25, 25), (5, 25, 58.25)],
+    [(10, 20, 0), (5, 20, 50), (10, 25, 25), (5, 25, 75)],
 )
 def test_temperature_penalties_include_both_ends(jersey, low, high, expected):
-    assert jersey.get_discomfort(low, high, 0, 0, 3) == pytest.approx(expected)
+    assert jersey.get_discomfort(
+        low, high, 0, 0, 3, Intensity.MEDIUM, Terrain.FLAT
+    ) == pytest.approx(expected)
 
 
 def test_hotter_maximum_still_matters_when_the_minimum_is_too_cold(jersey):
-    assert jersey.get_discomfort(5, 30, 0, 0, 2) > jersey.get_discomfort(5, 25, 0, 0, 2)
+    assert jersey.get_discomfort(
+        5, 30, 0, 0, 2, Intensity.MEDIUM, Terrain.FLAT
+    ) > jersey.get_discomfort(5, 25, 0, 0, 2, Intensity.MEDIUM, Terrain.FLAT)
 
 
 def test_longer_rides_increase_cold_discomfort(jersey):
-    assert jersey.get_discomfort(5, 20, 0, 0, 6) > jersey.get_discomfort(5, 20, 0, 0, 1)
+    assert jersey.get_discomfort(
+        5, 20, 0, 0, 6, Intensity.MEDIUM, Terrain.FLAT
+    ) > jersey.get_discomfort(5, 20, 0, 0, 1, Intensity.MEDIUM, Terrain.FLAT)
 
 
-def test_protection_removability_and_complexity_have_expected_costs(jersey):
-    assert jersey.get_discomfort(10, 20, 80, 30, 2) == 75
-    protected = replace(jersey, waterproof=True, windproof=True, removable=True, complexity=2)
-    assert protected.get_discomfort(10, 20, 80, 30, 2) == 5.5
+def test_protection_and_complexity_have_expected_costs_on_flat_terrain(jersey):
+    assert jersey.get_discomfort(10, 20, 80, 30, 2, Intensity.MEDIUM, Terrain.FLAT) == 55
+    protected = replace(jersey, waterproof=True, windproof=True, removability=1.0, complexity=2)
+    assert protected.get_discomfort(10, 20, 80, 30, 2, Intensity.MEDIUM, Terrain.FLAT) == 10
 
 
 @pytest.mark.parametrize(("low", "high"), [(0, 15), (-10, 0), (0, 0)])
@@ -64,7 +71,7 @@ def test_layering_uses_outer_comfort_and_inner_modifiers_without_mutating_items(
         layer_type=LayerType.OUTER,
         waterproof=True,
         wind_boost=0.5,
-        removable=True,
+        removability=1.0,
         complexity=1,
     )
     items = [outer, base]
@@ -150,3 +157,67 @@ def test_wardrobe_instances_do_not_share_mutable_inventory():
     second = get_clothing_wardrobe()
     assert second.clothing_items[0].name != "Changed"
     assert len(second.clothing_items) == len(first.clothing_items) + 1
+
+
+@pytest.mark.parametrize("intensity", list(Intensity))
+def test_intensity_scales_heat_and_sweat_but_not_cold(jersey, intensity):
+    sealed = replace(jersey, breathability=0)
+    assert sealed.get_discomfort(5, 25, 0, 0, 3, intensity, Terrain.FLAT) == pytest.approx(
+        50 + 12.5 * intensity.value + 10 * intensity.value
+    )
+    assert jersey.get_discomfort(5, 20, 0, 0, 3, intensity, Terrain.FLAT) == 50
+
+
+@pytest.mark.parametrize("terrain", list(Terrain))
+@pytest.mark.parametrize("intensity", list(Intensity))
+def test_removability_reward_keeps_terrain_and_intensity_weights(jersey, terrain, intensity):
+    removable = replace(jersey, removability=2)
+    score = removable.get_discomfort(10, 20, 0, 0, 2, intensity, terrain)
+    assert score == -4 * (1 + intensity.value) * terrain.value
+
+
+def test_breathability_combines_multiplicatively_and_rewards_better_inner_layers(jersey):
+    shell = replace(jersey, layer_type=LayerType.OUTER, breathability=0.8)
+    base = Clothing("Base", LayerType.INNER, BodyPart.UPPER, breathability=0.9, complexity=0)
+    breathable = ClothingCombo([base, shell]).get_clothing_item_equivalent()
+    less_breathable = ClothingCombo(
+        [replace(base, breathability=0.2), shell]
+    ).get_clothing_item_equivalent()
+    assert breathable.breathability == pytest.approx(0.72)
+    assert less_breathable.breathability == pytest.approx(0.16)
+    assert breathable.get_discomfort(
+        10, 20, 0, 0, 2, Intensity.EXTREME, Terrain.FLAT
+    ) == pytest.approx(11.2)
+    assert less_breathable.get_discomfort(
+        10, 20, 0, 0, 2, Intensity.EXTREME, Terrain.FLAT
+    ) == pytest.approx(33.6)
+    assert base.breathability == 0.9
+    assert shell.breathability == 0.8
+
+
+@pytest.mark.parametrize(("rating", "expected"), [(0, 0), (1, 0.8)])
+def test_breathability_boundary_layers(jersey, rating, expected):
+    base = Clothing("Base", LayerType.INNER, BodyPart.UPPER, breathability=rating)
+    shell = replace(jersey, layer_type=LayerType.OUTER, breathability=0.8)
+    assert ClothingCombo([base, shell]).get_clothing_item_equivalent().breathability == expected
+
+
+def test_removability_is_additive_and_exposes_the_ui_property(jersey):
+    base = Clothing("Base", LayerType.INNER, BodyPart.UPPER, removability=0.5)
+    shell = replace(jersey, layer_type=LayerType.OUTER, removability=0.5)
+    combined = ClothingCombo([base, shell]).get_clothing_item_equivalent()
+    assert combined.removability == 1
+    assert combined.removable
+    assert not base.removable
+
+
+@pytest.mark.parametrize("rating", [-0.1, 1.1, float("nan"), float("inf"), None, "0.5"])
+def test_invalid_breathability_is_rejected(jersey, rating):
+    with pytest.raises(ValueError, match="Breathability"):
+        replace(jersey, breathability=rating)
+
+
+@pytest.mark.parametrize("rating", [-1, float("nan"), float("inf"), None, "1"])
+def test_invalid_removability_is_rejected(jersey, rating):
+    with pytest.raises(ValueError, match="Removability"):
+        replace(jersey, removability=rating)

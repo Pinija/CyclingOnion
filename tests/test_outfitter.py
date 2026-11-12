@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 
 from outfitter import OutfitError, get_optimized_outfit
+from properties import Intensity, Terrain
 from wardrobe import BodyPart, Clothing, ClothingWardrobe, LayerType, get_clothing_wardrobe
 
 PART_NAMES = {
@@ -61,9 +62,20 @@ def test_ride_scenarios_produce_a_complete_minimum_score_outfit(
         chosen = outfit[name]
         assert chosen.body_part == part
         alternatives = wardrobe.valid_combinations_for_part(part)
-        chosen_cost = chosen.get_discomfort(effective_low, effective_high, rain, wind, duration)
+        chosen_cost = chosen.get_discomfort(
+            effective_low, effective_high, rain, wind, duration, weather.intensity, weather.terrain
+        )
         assert all(
-            chosen_cost <= c.get_discomfort(effective_low, effective_high, rain, wind, duration)
+            chosen_cost
+            <= c.get_discomfort(
+                effective_low,
+                effective_high,
+                rain,
+                wind,
+                duration,
+                weather.intensity,
+                weather.terrain,
+            )
             for c in alternatives
         )
     assert "Shoes" in outfit["Feet"].name
@@ -92,3 +104,18 @@ def test_invalid_duration_is_rejected(forecast, duration):
 def test_scoring_duration_must_match_the_forecast(forecast):
     with pytest.raises(OutfitError, match="match"):
         get_optimized_outfit(3, forecast)
+
+
+def test_higher_intensity_can_change_the_selected_outfit_through_breathability(forecast):
+    wardrobe = get_clothing_wardrobe()
+    wardrobe.clothing_items = [c for c in wardrobe.clothing_items if c.body_part != BodyPart.HEAD]
+    simple = Clothing(
+        "Less breathable", LayerType.MID, BodyPart.HEAD, 0, 40, breathability=0.3, complexity=0
+    )
+    breathable = replace(simple, name="Breathable", breathability=1, complexity=2)
+    wardrobe.clothing_items.extend([simple, breathable])
+    easy = replace(forecast, intensity=Intensity.LIGHT, terrain=Terrain.FLAT)
+    hard = replace(forecast, intensity=Intensity.EXTREME, terrain=Terrain.FLAT)
+    assert easy.get_effective_temp_range() == hard.get_effective_temp_range()
+    assert get_optimized_outfit(2, easy, wardrobe)["Head"].name == "Less breathable"
+    assert get_optimized_outfit(2, hard, wardrobe)["Head"].name == "Breathable"

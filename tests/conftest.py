@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 import requests
 
+from properties import Intensity, Terrain
 from weather import WeatherForecast
 
 
@@ -31,8 +32,8 @@ def forecast():
         is_night=False,
         condition="Partly cloudy",
         icon_url="//cdn.weatherapi.com/weather/64x64/day/116.png",
-        terrain="flat",
-        intensity="medium",
+        terrain=Terrain.FLAT,
+        intensity=Intensity.MEDIUM,
     )
 
 
