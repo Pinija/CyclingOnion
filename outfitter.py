@@ -1,37 +1,45 @@
-from weather import WeatherForecast, get_weather_forecast
-from wardrobe import get_clothing_wardrobe
+"""Choose the lowest-scoring valid clothing combination for each body part."""
+
+from wardrobe import Clothing, ClothingWardrobe, get_clothing_wardrobe
+from weather import WeatherForecast
 
 
-def get_optimized_outfit(hours: int, weather: WeatherForecast):
-    """Minimize the discomfort score on all possible clothing sets for the current weather prediction."""
+class OutfitError(ValueError):
+    """The wardrobe or ride cannot produce a complete outfit."""
+
+
+def get_optimized_outfit(
+    hours: int, weather: WeatherForecast, wardrobe: ClothingWardrobe | None = None
+) -> dict[str, Clothing]:
+    """Minimize the additive discomfort score, independently per body part.
+
+    Ties retain wardrobe order. Supplying a wardrobe supports custom inventories
+    and deterministic tests without modifying the built-in catalogue.
+    """
+    if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= 6:
+        raise OutfitError("Ride duration must be a whole number from 1 to 6 hours.")
+    if hours != weather.forecast_duration:
+        raise OutfitError("Ride duration must match the weather forecast duration.")
+
     eff_temp_min, eff_temp_max = weather.get_effective_temp_range()
-    wind_max = weather.get_wind_max()
-    precip_prob = weather.get_precipitation_prob()
-
-    wardrobe = get_clothing_wardrobe()
+    if wardrobe is None:
+        wardrobe = get_clothing_wardrobe()
     combos = {
-        "Head" : wardrobe.get_head_combinations(),
-        "Upper Body" : wardrobe.get_upper_combinations(),
-        "Lower Body" : wardrobe.get_lower_combinations(),
-        "Hands" : wardrobe.get_hands_combinations(),
-        "Feet" : wardrobe.get_feet_combinations()
+        "Head": wardrobe.get_head_combinations(),
+        "Upper Body": wardrobe.get_upper_combinations(),
+        "Lower Body": wardrobe.get_lower_combinations(),
+        "Hands": wardrobe.get_hands_combinations(),
+        "Feet": wardrobe.get_feet_combinations(),
     }
 
     outfit = {}
-    for name, combo in combos.items():
-        combo.sort(key=lambda x: x.get_discomfort(eff_temp_min, eff_temp_max, precip_prob, wind_max, hours))
-        outfit[name] = combo[0]
-    
+    for name, candidates in combos.items():
+        if not candidates:
+            raise OutfitError(f"No valid clothing combinations for {name}. Check the wardrobe.")
+        outfit[name] = min(
+            candidates,
+            key=lambda item: item.get_discomfort(
+                eff_temp_min, eff_temp_max, weather.precipitation_prob, weather.wind_max, hours
+            ),
+        )
     return outfit
-
-if __name__ == "__main__":
-    params = ["Freiburg", 3, "mountain", "hard"]
-    weather = get_weather_forecast(*params)
-    effective_weather = weather.get_effective_temp_range()
-    print(weather)
-    print("Effective temp (min, max): " + str(effective_weather))
-    outfit = get_optimized_outfit(3, weather)
-    for body_part, combo in outfit.items():
-        print(body_part + ": " + str(combo))
-
-    
