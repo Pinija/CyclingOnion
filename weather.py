@@ -159,9 +159,17 @@ def _parse_forecast(
 
 
 def get_weather_forecast(
-    city: str, hours: int, terrain: Terrain | str, intensity: Intensity | str
+    city: str,
+    hours: int,
+    terrain: Terrain | str,
+    intensity: Intensity | str,
+    *,
+    api_key: str | None = None,
 ) -> WeatherForecast:
-    """Fetch a complete 1–6 hour forecast using WEATHERAPI_KEY from the environment.
+    """Fetch a complete 1–6 hour forecast with an explicit or environment API key.
+
+    The Streamlit app passes its secret explicitly. Other callers can omit api_key
+    to use WEATHERAPI_KEY from the environment, without depending on Streamlit.
 
     Raise WeatherError for invalid inputs, missing configuration, network/API
     failures, or malformed/incomplete responses. Never include raw request URLs
@@ -176,9 +184,14 @@ def get_weather_forecast(
         intensity = get_intensity(intensity)
     except ValueError as error:
         raise WeatherError(str(error)) from None
-    api_key = os.environ.get("WEATHERAPI_KEY", "").strip()
-    if not api_key:
-        raise WeatherError("Set WEATHERAPI_KEY in the environment before requesting a forecast.")
+    if api_key is None:
+        api_key = os.environ.get("WEATHERAPI_KEY", "")
+    if not isinstance(api_key, str) or not api_key.strip():
+        raise WeatherError(
+            "Set WEATHERAPI_KEY in Streamlit App settings → Secrets, "
+            "or in your local environment, before requesting a forecast."
+        )
+    api_key = api_key.strip()
 
     params = {"key": api_key, "q": city.strip(), "days": 2, "aqi": "no", "alerts": "no"}
     try:

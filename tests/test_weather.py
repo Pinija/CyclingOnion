@@ -328,3 +328,15 @@ def test_short_high_intensity_rides_still_get_fuel_tip(forecast, intensity):
 @pytest.mark.parametrize("terrain", [Terrain.MOUNTAIN, Terrain.ALPINE])
 def test_short_easy_mountain_rides_get_terrain_tip(forecast, terrain):
     assert "view" in replace(forecast, terrain=terrain, intensity=Intensity.LIGHT).get_pro_tip()
+
+
+def test_explicit_key_takes_precedence_over_environment_and_is_trimmed(weather_http):
+    get_weather_forecast("Freiburg", 2, "flat", "easy", api_key="  explicit-test-key  ")
+    assert weather_http[0].call_args.kwargs["params"]["key"] == "explicit-test-key"
+
+
+@pytest.mark.parametrize("key", ["", "   ", 123, {"key": "misconfigured"}])
+def test_invalid_explicit_key_reports_configuration_error_without_request(weather_http, key):
+    with pytest.raises(WeatherError, match="App settings.*Secrets"):
+        get_weather_forecast("Freiburg", 2, "flat", "easy", api_key=key)
+    weather_http[0].assert_not_called()

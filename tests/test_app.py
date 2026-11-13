@@ -131,3 +131,38 @@ def test_every_intensity_label_can_produce_an_outfit(app, weather_http, intensit
     assert not app.exception
     assert not app.error
     assert any("Recommended outfit" in element.value for element in app.markdown)
+
+
+def test_streamlit_secret_works_without_an_environment_key(monkeypatch, weather_http):
+    monkeypatch.delenv("WEATHERAPI_KEY")
+    app = AppTest.from_file(str(APP_PATH), default_timeout=10)
+    app.secrets["WEATHERAPI_KEY"] = "cloud-test-key"
+    app.run()
+    submit(app)
+    assert not app.exception
+    assert not app.error
+    assert weather_http[0].call_args.kwargs["params"]["key"] == "cloud-test-key"
+    output = "\n".join(element.value for element in app.markdown)
+    assert "Recommended outfit" in output
+    assert "cloud-test-key" not in output
+
+
+def test_streamlit_secret_takes_precedence_over_environment(weather_http):
+    app = AppTest.from_file(str(APP_PATH), default_timeout=10)
+    app.secrets["WEATHERAPI_KEY"] = "cloud-test-key"
+    app.run()
+    submit(app)
+    assert not app.exception
+    assert not app.error
+    assert weather_http[0].call_args.kwargs["params"]["key"] == "cloud-test-key"
+
+
+@pytest.mark.parametrize("key", ["", "   ", 123])
+def test_invalid_streamlit_secret_is_explained(weather_http, key):
+    app = AppTest.from_file(str(APP_PATH), default_timeout=10)
+    app.secrets["WEATHERAPI_KEY"] = key
+    app.run()
+    submit(app)
+    assert not app.exception
+    assert "Secrets" in app.error[0].value
+    weather_http[0].assert_not_called()

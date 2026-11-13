@@ -69,7 +69,13 @@ if st.button("Find a Matching Outfit for the Weather 🚴"):
     else:
         try:
             with st.spinner("Checking the weather and finding your outfit..."):
-                weather = get_weather_forecast(location, duration, terrain, intensity)
+                try:
+                    api_key = st.secrets.get("WEATHERAPI_KEY")
+                except FileNotFoundError:
+                    api_key = None
+                weather = get_weather_forecast(
+                    location, duration, terrain, intensity, api_key=api_key
+                )
                 outfit = get_optimized_outfit(duration, weather)
         except (WeatherError, OutfitError) as error:
             st.error(str(error))

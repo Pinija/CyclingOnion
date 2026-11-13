@@ -41,12 +41,40 @@ On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` and set the ke
 $env:WEATHERAPI_KEY = "your-key-from-weatherapi"
 ```
 
-The application reads the process environment. It does **not** automatically load
-`.env` or `.streamlit/secrets.toml`. Configure the environment on your hosting service
-when deploying, and keep credentials out of source control.
+The Streamlit app reads `WEATHERAPI_KEY` from `st.secrets` first, falling back to the
+process environment when that secret is absent. It does **not** automatically load
+`.env`. Direct callers of `get_weather_forecast()` can supply an `api_key` keyword
+argument or use the environment variable.
 
 Try `Freiburg, Germany`, a two-hour ride, flat terrain, and medium intensity. Selecting
 the button fetches current weather; the result will vary with the forecast.
+
+### Hosting on Streamlit Community Cloud
+
+1. Open your workspace at [share.streamlit.io](https://share.streamlit.io/).
+2. Open the menu next to CyclingOnion, then **Settings → Secrets**.
+3. Add this at the top level, before any `[section]` headers, using your real key:
+
+   ```toml
+   WEATHERAPI_KEY = "your-weatherapi-key"
+   ```
+
+4. Click **Save**, then retry the app. Reboot the app from its menu if it still
+   reports missing configuration.
+
+The key belongs in Streamlit's settings, not the GitHub repository. Streamlit also
+exposes root-level secrets as environment variables, so this setting supports the
+earlier environment-only version of CyclingOnion as well. See Streamlit's
+[app settings](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app/app-settings)
+and [secrets documentation](https://docs.streamlit.io/develop/concepts/connections/secrets-management).
+
+For local development, you can alternatively create `.streamlit/secrets.toml` with
+the same TOML entry. That file is already ignored by Git. Restart Streamlit after
+creating it. Do not put the key under a nested table or commit the real file.
+
+If a key was previously committed, regenerate it through your WeatherAPI account
+and save the replacement in Secrets; removing it from the latest source does not
+remove it from Git history.
 
 ### Using Conda
 
